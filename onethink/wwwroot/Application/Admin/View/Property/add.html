@@ -1,0 +1,207 @@
+<extend name="Public/base"/>
+
+<block name="body">
+    <script type="text/javascript" src="__STATIC__/uploadify/jquery.uploadify.min.js"></script>
+    <div class="main-title">
+        <h2>新增用户</h2>
+    </div>
+    <form action="{:U()}" method="post" class="form-horizontal">
+        <div class="form-item">
+            <label class="item-label">标题</label>
+            <div class="controls">
+                <input type="text" class="text input-large" name="title" value="">
+            </div>
+        </div>
+        <div class="form-item">
+            <label class="item-label">价格</label>
+            <div class="controls">
+                <input type="text" class="text input-large" name="price" value="">
+                价格单位: <select style="width: 200px;" name="price_unit">
+                <option value="1">元/月</option>
+                <option value="2">万元</option>
+            </select>
+            </div>
+        </div>
+        <div class="form-item">
+            <label class="item-label">类型</label>
+            <div class="controls">
+                <select style="width: 200px;" name="class">
+                    <option value="1">出租</option>
+                    <option value="2">销售</option>
+                </select>
+            </div>
+        </div>
+
+
+
+        <div class="form-item">
+        <label class="item-label">截止时间</label>
+        <div class="controls">
+            <input type="text" name="stop_time" class="text time" value="" placeholder="请选择时间">                    </div>
+        </div>
+
+
+
+        <div class="controls">
+                <input type="file" id="upload_picture_{$field.name}">
+                <input type="hidden" name="img" id="cover_id_{$field.name}"/>
+                <div class="upload-img-box">
+                    <notempty name="data[$field['name']]">
+                        <div class="upload-pre-item"><img src="{$data[$field['name']]|get_cover='path'}"/></div>
+                    </notempty>
+            </div>
+        </div>
+
+
+        <script type="text/javascript">
+            //上传图片
+            /* 初始化上传插件 */
+            $("#upload_picture_{$field.name}").uploadify({
+                "height"          : 30,
+                "swf"             : "__STATIC__/uploadify/uploadify.swf",
+                "fileObjName"     : "download",
+                "buttonText"      : "上传图片",
+                "uploader"        : "{:U('File/uploadPicture',array('session_id'=>session_id()))}",
+                "width"           : 120,
+                'removeTimeout'	  : 1,
+                'fileTypeExts'	  : '*.jpg; *.png; *.gif;',
+                "onUploadSuccess" : uploadPicture{$field.name},
+            'onFallback' : function() {
+                alert('未检测到兼容版本的Flash.');
+            }
+            });
+            function uploadPicture{$field.name}(file, data){
+                var data = $.parseJSON(data);
+                var src = '';
+                if(data.status){
+                    $("#cover_id_{$field.name}").val(data.url || '__ROOT__' + data.path);
+                    src = data.url || '__ROOT__' + data.path
+                    $("#cover_id_{$field.name}").parent().find('.upload-img-box').html(
+                        '<div class="upload-pre-item"><img src="__ROOT__' + src + '"/></div>'
+                    );
+                } else {
+                    updateAlert(data.info);
+                    setTimeout(function(){
+                        $('#top-alert').find('button').click();
+                        $(that).removeClass('disabled').prop('disabled',false);
+                    },1500);
+                }
+            }
+        </script>
+
+
+
+
+
+
+        <div class="form-item">
+            <label class="item-label">联系电话</label>
+            <div class="controls">
+                <input type="text" class="text input-large" name="tel" value="">
+            </div>
+        </div>
+
+
+
+        <div value="editor">
+            <label class="textarea">详情</label>
+            <textarea name="content">{$field.value}</textarea>
+            {:hook('adminArticleEdit', array('name'=>$field['name'],'value'=>$field['value']))}
+            </label>
+        </div>
+
+        <div class="form-item">
+            <button class="btn submit-btn ajax-post" id="submit" type="submit" target-form="form-horizontal">确 定</button>
+            <button class="btn btn-return" onclick="javascript:history.back(-1);return false;">返 回</button>
+        </div>
+    </form>
+</block>
+
+<block name="script">
+        <link href="__STATIC__/datetimepicker/css/datetimepicker.css" rel="stylesheet" type="text/css">
+        <php>if(C('COLOR_STYLE')=='blue_color') echo '<link href="__STATIC__/datetimepicker/css/datetimepicker_blue.css" rel="stylesheet" type="text/css">';</php>
+        <link href="__STATIC__/datetimepicker/css/dropdown.css" rel="stylesheet" type="text/css">
+        <script type="text/javascript" src="__STATIC__/datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
+        <script type="text/javascript" src="__STATIC__/datetimepicker/js/locales/bootstrap-datetimepicker.zh-CN.js" charset="UTF-8"></script>
+        <script type="text/javascript">
+
+            $('#submit').click(function(){
+                $('#form').submit();
+            });
+
+
+            $(function(){
+                $('.time').datetimepicker({
+                    format: 'yyyy-mm-dd hh:ii',
+                    language:"zh-CN",
+                    minView:2,
+                    autoclose:true
+                });
+                showTab();
+
+                <if condition="C('OPEN_DRAFTBOX') and (ACTION_NAME eq 'add' or $info['status'] eq 3)">
+                //保存草稿
+                    var interval;
+                $('#autoSave').click(function(){
+                    var target_form = $(this).attr('target-form');
+                    var target = $(this).attr('url')
+                    var form = $('.'+target_form);
+                    var query = form.serialize();
+                    var that = this;
+
+                    $(that).addClass('disabled').attr('autocomplete','off').prop('disabled',true);
+                    $.post(target,query).success(function(data){
+                        if (data.status==1) {
+                            updateAlert(data.info ,'alert-success');
+                            $('input[name=id]').val(data.data.id);
+                        }else{
+                            updateAlert(data.info);
+                        }
+                        setTimeout(function(){
+                            $('#top-alert').find('button').click();
+                            $(that).removeClass('disabled').prop('disabled',false);
+                        },1500);
+                    })
+
+                    //重新开始定时器
+                    clearInterval(interval);
+                    autoSaveDraft();
+                    return false;
+                });
+
+                //Ctrl+S保存草稿
+                $('body').keydown(function(e){
+                    if(e.ctrlKey && e.which == 83){
+                        $('#autoSave').click();
+                        return false;
+                    }
+                });
+
+                //每隔一段时间保存草稿
+                function autoSaveDraft(){
+                    interval = setInterval(function(){
+                        //只有基础信息填写了，才会触发
+                        var title = $('input[name=title]').val();
+                        var name = $('input[name=name]').val();
+                        var des = $('textarea[name=description]').val();
+                        if(title != '' || name != '' || des != ''){
+                            $('#autoSave').click();
+                        }
+                    }, 1000*parseInt({:C('DRAFT_AOTOSAVE_INTERVAL')}));
+                }
+                autoSaveDraft();
+
+                </if>
+
+            });
+        </script>
+
+    <script type="text/javascript">
+        //导航高亮
+        highlight_subnav('{:U('Property/add')}');
+    </script>
+</block>
+
+
+
+
